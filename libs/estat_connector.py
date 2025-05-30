@@ -1,5 +1,6 @@
 import requests
 import pandas as pd
+import re
 from typing import Optional, Dict, Any, Union, List
 
 
@@ -35,6 +36,27 @@ class EstatConnector:
             raise EstatAPIError(f"API Error: STATUS={status}, MSG={msg}")
         return data
 
+    def _normalize_column_names(self, df: pd.DataFrame) -> pd.DataFrame:
+        """列名から@、$などの記号を除去し、正規化する"""
+        renamed_columns = {}
+        for col in df.columns:
+            # @で始まる属性名を正規化
+            if col.startswith('@'):
+                renamed_columns[col] = col[1:]
+            # $はvalueに変換
+            elif col == '$':
+                renamed_columns[col] = 'value'
+            # 一般的なケースでアンダースコアに置換
+            elif re.search(r'[^a-zA-Z0-9_]', col):
+                new_name = re.sub(r'[^a-zA-Z0-9_]', '_', col)
+                # 連続したアンダースコアを一つに
+                new_name = re.sub(r'_{2,}', '_', new_name)
+                # 末尾のアンダースコアを削除
+                new_name = new_name.rstrip('_')
+                renamed_columns[col] = new_name
+                
+        return df.rename(columns=renamed_columns)
+
     def search_stats(
         self,
         searchWord: Optional[str] = None,
@@ -66,11 +88,29 @@ class EstatConnector:
         if not table_infs:
             return pd.DataFrame()  # 空DataFrame
 
-        # id属性を含めたい場合
+        # 属性を持つ要素の正規化（@idの手動変換は不要）
         for t in table_infs:
-            if "@id" in t:
-                t["id"] = t["@id"]
-        return pd.json_normalize(table_infs)
+            # 属性を持つ要素の正規化
+            for key, value in list(t.items()):
+                if isinstance(value, dict) and "@code" in value:
+                    # 属性と値を別々の列に分ける
+                    code_value = value.get("@code")
+                    text_value = value.get("$")
+                    
+                    # コード列を追加
+                    if code_value is not None:
+                        t[f"{key}_code"] = code_value
+                    
+                    # 元の列をテキスト値で置き換え
+                    if text_value is not None:
+                        t[key] = text_value
+                    # テキスト値がなければ属性値を使用
+                    elif code_value is not None:
+                        t[key] = code_value
+        
+        df = pd.json_normalize(table_infs)
+        # 列名の正規化
+        return self._normalize_column_names(df)
 
     def get_stats_data(
         self,
@@ -109,9 +149,13 @@ class EstatConnector:
         records = []
         for v in values:
             rec = v.copy()
-            rec["value"] = rec.pop("$", None)
+            # "$" キーがある場合は "value" に変換
+            if "$" in rec:
+                rec["value"] = rec.pop("$", None)
             records.append(rec)
-        return pd.DataFrame(records)
+        df = pd.DataFrame(records)
+        # 列名の正規化
+        return self._normalize_column_names(df)
 
 
 # 例：利用方法
