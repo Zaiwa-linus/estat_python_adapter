@@ -7,9 +7,18 @@ e-Statのデータを取得するための非公式Pythonライブラリです�
 
 ## インストール
 
+### pip経由でのインストール
+
 ```bash
-git clone https://github.com/yourusername/estat_python_adapter.git
+pip install git+https://github.com/Zaiwa-linus/estat_python_adapter.git
+```
+
+### ソースからのインストール
+
+```bash
+git clone https://github.com/Zaiwa-linus/estat_python_adapter.git
 cd estat_python_adapter
+pip install -e .
 ```
 
 ## 使い方
@@ -17,7 +26,7 @@ cd estat_python_adapter
 基本的な使い方は以下の通りです：
 
 ```python
-from libs.sample import EstatConnector
+from estat_python_adapter import EstatConnector
 
 # APIキーを設定（e-Statサイトで取得したアプリケーションID）
 API_KEY = "あなたのAPIキー"
