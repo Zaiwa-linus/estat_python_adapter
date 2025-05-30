@@ -42,8 +42,8 @@ if not stats_df.empty:
 ```
 
 詳細な使用例は以下のファイルを参照してください：
-- [使用方法ガイド](lab/sample_usage.md)
-- [サンプルコード](lab/example.py)
+- [使用方法ガイド](docs/sample_usage.md)
+- [サンプルコード](docs/examples/example.py)
 
 ## サポートしている機能
 
